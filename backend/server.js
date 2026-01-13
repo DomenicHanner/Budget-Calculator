@@ -25,6 +25,7 @@ db.exec(`
     include_hotel INTEGER DEFAULT 0,
     hotel_cost_per_night REAL DEFAULT 0,
     per_diem REAL DEFAULT 0,
+    actual_per_diem REAL DEFAULT 0,
     archived INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -49,6 +50,13 @@ db.exec(`
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   );
 `);
+
+// Add actual_per_diem column if it doesn't exist
+try {
+  db.exec(`ALTER TABLE projects ADD COLUMN actual_per_diem REAL DEFAULT 0`);
+} catch (e) {
+  // Column already exists
+}
 
 // Get all projects (non-archived)
 app.get('/api/projects', (req, res) => {

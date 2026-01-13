@@ -383,9 +383,11 @@ function App() {
                       <label>Drehtage</label>
                       <input
                         type="number"
+                        className="with-spinner"
                         min="1"
-                        value={project.shooting_days || 1}
-                        onChange={(e) => updateProjectField('shooting_days', parseInt(e.target.value) || 1)}
+                        step="1"
+                        value={project.shooting_days || ''}
+                        onChange={(e) => updateProjectField('shooting_days', parseInt(e.target.value) || 0)}
                       />
                     </div>
                     <div className="setting-item">
@@ -514,76 +516,143 @@ function App() {
                 </div>
                 
                 {project.positions?.length > 0 ? (
-                  <>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table className="comparison-table">
-                        <thead>
-                          <tr>
-                            <th>Typ</th>
-                            <th>Name</th>
-                            <th>Kalkulierte Kosten</th>
-                            <th>Tatsächliche Kosten</th>
-                            <th>Differenz</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {project.positions.filter(p => p.active).map((pos) => {
-                            const calculated = calculatePositionSum(pos)
-                            const actual = pos.actual_costs || 0
-                            const diff = calculated - actual
-                            return (
-                              <tr key={pos.id}>
-                                <td>
-                                  <span className={`type-badge ${pos.type}`}>
-                                    {pos.type === 'crew' ? 'Crew' : 
-                                     pos.type === 'darsteller' ? 'Darsteller' :
-                                     pos.type === 'leihe' ? 'Leihe' :
-                                     pos.type === 'location' ? 'Location' : 'Sonstiges'}
-                                  </span>
-                                </td>
-                                <td>{pos.name || '(ohne Name)'}</td>
-                                <td className="calculated">{formatCurrency(calculated)}</td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    className="actual-input no-spinner"
-                                    value={pos.actual_costs || ''}
-                                    onChange={(e) => {
-                                      const value = parseFloat(e.target.value) || 0
-                                      updatePositionLocal(pos.id, { actual_costs: value })
-                                    }}
-                                    placeholder="0"
-                                  />
-                                </td>
-                                <td className={`difference ${diff >= 0 ? 'positive' : 'negative'}`}>
-                                  {diff >= 0 ? '+' : ''}{formatCurrency(diff)}
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                  (() => {
+                    // Calculate per diem for each position and total
+                    const perDiem = project.per_diem || 0
+                    const activePositions = project.positions.filter(p => p.active)
+                    const crewDarstellerPositions = activePositions.filter(p => p.type === 'crew' || p.type === 'darsteller')
                     
-                    <div className="comparison-summary">
-                      <div className="comparison-summary-grid">
-                        <div className="comparison-summary-item">
-                          <label>Kalkulierte Gesamtkosten</label>
-                          <div className="value">{formatCurrency(comparison.calculated)}</div>
+                    // Calculate total per diem
+                    let totalPerDiem = 0
+                    crewDarstellerPositions.forEach(pos => {
+                      const daysOnSet = pos.days_on_set ?? project.shooting_days
+                      totalPerDiem += perDiem * daysOnSet
+                    })
+                    
+                    // Calculate position costs WITHOUT per diem
+                    const getPositionCostWithoutPerDiem = (pos) => {
+                      if (pos.type === 'leihe' || pos.type === 'location' || pos.type === 'sonstiges') {
+                        return pos.costs || 0
+                      }
+                      const daysOnSet = pos.days_on_set ?? project.shooting_days
+                      const dailyRate = (pos.daily_rate || 0) * daysOnSet
+                      const flatFee = pos.flat_fee || 0
+                      const hotelCosts = (pos.hotel_nights || 0) * (project.hotel_cost_per_night || 0)
+                      const travelCosts = pos.travel_costs || 0
+                      // Exclude per diem from individual position
+                      return dailyRate + flatFee + hotelCosts + travelCosts
+                    }
+                    
+                    // Calculate totals
+                    let totalCalculated = 0
+                    activePositions.forEach(pos => {
+                      totalCalculated += getPositionCostWithoutPerDiem(pos)
+                    })
+                    totalCalculated += totalPerDiem // Add total per diem once
+                    
+                    let totalActual = (project.actual_per_diem || 0)
+                    activePositions.forEach(pos => {
+                      totalActual += (pos.actual_costs || 0)
+                    })
+                    
+                    return (
+                      <>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table className="comparison-table">
+                            <thead>
+                              <tr>
+                                <th>Typ</th>
+                                <th>Name</th>
+                                <th>Kalkulierte Kosten</th>
+                                <th>Tatsächliche Kosten</th>
+                                <th>Differenz</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {activePositions.map((pos) => {
+                                const calculated = getPositionCostWithoutPerDiem(pos)
+                                const actual = pos.actual_costs || 0
+                                const diff = calculated - actual
+                                return (
+                                  <tr key={pos.id}>
+                                    <td>
+                                      <span className={`type-badge ${pos.type}`}>
+                                        {pos.type === 'crew' ? 'Crew' : 
+                                         pos.type === 'darsteller' ? 'Darsteller' :
+                                         pos.type === 'leihe' ? 'Leihe' :
+                                         pos.type === 'location' ? 'Location' : 'Sonstiges'}
+                                      </span>
+                                    </td>
+                                    <td>{pos.name || '(ohne Name)'}</td>
+                                    <td className="calculated">{formatCurrency(calculated)}</td>
+                                    <td>
+                                      <input
+                                        type="text"
+                                        className="actual-input no-spinner"
+                                        value={pos.actual_costs || ''}
+                                        onChange={(e) => {
+                                          const value = parseFloat(e.target.value) || 0
+                                          updatePositionLocal(pos.id, { actual_costs: value })
+                                        }}
+                                        placeholder="0"
+                                      />
+                                    </td>
+                                    <td className={`difference ${diff >= 0 ? 'positive' : 'negative'}`}>
+                                      {diff >= 0 ? '+' : ''}{formatCurrency(diff)}
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                              {/* Verpflegungen row */}
+                              {totalPerDiem > 0 && (
+                                <tr className="per-diem-row">
+                                  <td>
+                                    <span className="type-badge verpflegung">Verpflegung</span>
+                                  </td>
+                                  <td>Verpflegungen gesamt</td>
+                                  <td className="calculated">{formatCurrency(totalPerDiem)}</td>
+                                  <td>
+                                    <input
+                                      type="text"
+                                      className="actual-input no-spinner"
+                                      value={project.actual_per_diem || ''}
+                                      onChange={(e) => {
+                                        const value = parseFloat(e.target.value) || 0
+                                        updateProjectField('actual_per_diem', value)
+                                      }}
+                                      placeholder="0"
+                                    />
+                                  </td>
+                                  <td className={`difference ${(totalPerDiem - (project.actual_per_diem || 0)) >= 0 ? 'positive' : 'negative'}`}>
+                                    {(totalPerDiem - (project.actual_per_diem || 0)) >= 0 ? '+' : ''}{formatCurrency(totalPerDiem - (project.actual_per_diem || 0))}
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
                         </div>
-                        <div className="comparison-summary-item">
-                          <label>Tatsächliche Gesamtkosten</label>
-                          <div className="value">{formatCurrency(comparison.actual)}</div>
-                        </div>
-                        <div className="comparison-summary-item">
-                          <label>Differenz</label>
-                          <div className={`value ${comparison.difference >= 0 ? 'positive' : 'negative'}`}>
-                            {comparison.difference >= 0 ? '+' : ''}{formatCurrency(comparison.difference)}
+                        
+                        <div className="comparison-summary">
+                          <div className="comparison-summary-grid">
+                            <div className="comparison-summary-item">
+                              <label>Kalkulierte Gesamtkosten</label>
+                              <div className="value">{formatCurrency(totalCalculated)}</div>
+                            </div>
+                            <div className="comparison-summary-item">
+                              <label>Tatsächliche Gesamtkosten</label>
+                              <div className="value">{formatCurrency(totalActual)}</div>
+                            </div>
+                            <div className="comparison-summary-item">
+                              <label>Differenz</label>
+                              <div className={`value ${(totalCalculated - totalActual) >= 0 ? 'positive' : 'negative'}`}>
+                                {(totalCalculated - totalActual) >= 0 ? '+' : ''}{formatCurrency(totalCalculated - totalActual)}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </>
+                      </>
+                    )
+                  })()
                 ) : (
                   <div className="empty-state">
                     <p>Noch keine Positionen vorhanden</p>
