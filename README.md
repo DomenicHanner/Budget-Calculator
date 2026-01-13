@@ -21,32 +21,41 @@ Eine moderne, minimalistische Webapp zur Budgetkalkulation für Filmprojekte.
 - **Realkosten-Vergleich**: Tatsächliche Kosten mit Kalkulation vergleichen
 - **Auto-Save**: Änderungen werden automatisch gespeichert
 
-## Installation
+## Schnellstart
 
-### Voraussetzungen
-
-- Node.js (v18 oder höher)
-- npm
-
-### Backend starten
+### Option 1: Mit Start-Script (empfohlen)
 
 ```bash
+# Repository klonen
+git clone https://github.com/DomenicHanner/Budget-Calculator.git
+cd Budget-Calculator
+
+# App starten (installiert automatisch alle Abhängigkeiten)
+./start.sh
+```
+
+Die App öffnet sich automatisch im Browser unter `http://localhost:5173`
+
+### Option 2: Manuell starten
+
+```bash
+# Repository klonen
+git clone https://github.com/DomenicHanner/Budget-Calculator.git
+cd Budget-Calculator
+
+# Backend starten (Terminal 1)
 cd backend
 npm install
 npm start
-```
 
-Der Server läuft auf `http://localhost:12000`
-
-### Frontend starten
-
-```bash
+# Frontend starten (Terminal 2)
 cd frontend
 npm install
 npm run dev
 ```
 
-Die App läuft auf `http://localhost:12001`
+- Backend läuft auf `http://localhost:3001`
+- Frontend läuft auf `http://localhost:5173`
 
 ## Projektstruktur
 
@@ -95,16 +104,21 @@ Die App läuft auf `http://localhost:12001`
 
 ### Backend Port ändern
 
-In `backend/server.js`:
+Über Umgebungsvariable:
+```bash
+PORT=3001 node server.js
+```
+
+Oder in `backend/server.js`:
 ```javascript
-const PORT = 12000; // Hier ändern
+const PORT = process.env.PORT || 3001; // Standard: 3001
 ```
 
 ### Frontend API-URL ändern
 
-In `frontend/src/App.jsx`:
-```javascript
-const API_URL = 'http://localhost:12000/api'; // Hier ändern
+Über Umgebungsvariable (`.env` Datei im frontend Ordner):
+```
+VITE_API_URL=http://localhost:3001/api
 ```
 
 ### Frontend Port ändern
@@ -112,7 +126,7 @@ const API_URL = 'http://localhost:12000/api'; // Hier ändern
 In `frontend/vite.config.js`:
 ```javascript
 server: {
-  port: 12001, // Hier ändern
+  port: 5173, // Standard: 5173
 }
 ```
 
