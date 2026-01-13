@@ -333,11 +333,13 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <div className="header-left">
-          <h1>Film Budget Kalkulator</h1>
-        </div>
-        <div className="header-actions">
-          <button onClick={() => { loadProjects(); setShowBrowser(true) }}>Projekte</button>
+        <div className="header-inner">
+          <div className="header-left">
+            <h1>Film Budget Kalkulator</h1>
+          </div>
+          <div className="header-actions">
+            <button onClick={() => { loadProjects(); setShowBrowser(true) }}>Projekte</button>
+          </div>
         </div>
       </header>
 
