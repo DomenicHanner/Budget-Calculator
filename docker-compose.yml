@@ -1,0 +1,23 @@
+services:
+  backend:
+    build: ./backend
+    container_name: budget-backend
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+    volumes:
+      - budget-backend-data:/app
+    ports:
+      - "3001:3001"
+
+  frontend:
+    build: ./frontend
+    container_name: budget-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3002:80"
+
+volumes:
+  budget-backend-data:
